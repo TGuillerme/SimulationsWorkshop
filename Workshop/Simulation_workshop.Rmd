@@ -1,0 +1,615 @@
+---
+title: "Island radiations."
+author: "Thomas Guillerme"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    fig_width: 6
+    fig_height: 6
+---
+
+# 0 - Requirements
+
+If you want to follow the coding part of the workshop, you'll need a basic understanding of `R`.
+By basic we mean whether you are familiar with the following concepts:
+
+ * You know how to install and load a package in `R`.
+ * You know what a function is in `R`.
+ * You have used a `"list"` object in `R`.
+ * You have used the `<-` attribution function in `R`.
+ * You have changed your directory in `R`.
+ * You have executed a script in `R`.
+
+We will be using the following packages for this workshop:
+
+```{r, eval = FALSE}
+## The names of the packages we will be using in this workshop
+required_packages <- c("")
+
+## Installing/updating the packages if you haven't already
+install.packages(required_packages)
+```
+<!-- TODO:TG: list of packages -->
+
+
+If you're not familiar with these concepts, no worries, you can still follow the instructions of the workshop and just copy paste the code or read the compiled version [here]().
+<!-- TODO:TG: link to compiled version -->
+You can always ask your colleagues or us if you feel a bit lost or, understand the code in more details in the future.
+
+
+# 1 - The data
+
+```{r}
+## Loading the packages
+library()
+```
+<!-- TODO:TG: list of packages -->
+
+
+In this workshop we're going to test what parameters relate to radiation in two contrasting groups: Darwin finches and pigeons!
+For that we are using a part of the dataset of 
+<!-- TODO:TG: inc reference to data -->
+where we have two different regions of a trait space describing bird beak morphology in 8 dimensions (species close together in the trait space share similar beak shapes) as well as binary information on whether the species are living on islands or on the mainland.
+We have created a dataset summarising that for the two clades: pigeons and Darwin Finches.
+
+```{r, eval = FALSE}
+## Data
+
+```
+<!-- TODO:TG: wrap up the data in shareable way -->
+
+Here is one way to visualise this data:
+
+```{r, eval = FALSE}
+# op <- par(mfrow = c(2,2))
+# plot.tree(data_darwin, name = "Darwin finches")
+# plot.tree(data_pigeon, name = "Pigeons")
+# plot.covar(covar_darwin, name = "", model = "model2")
+# plot.covar(covar_pigeon, name = "", model = "model2", legend = FALSE)
+# par(op)
+```
+<!-- TODO:TG: plotting the data script -->
+
+# 2 - The question
+
+Here we have two questions: the first one is whether the beak shapes of these groups show some signal of an adaptive radiation for species currently on an island compared to their mainland counter parts.
+We will classify adaptive radiations in two ways:
+
+ * Do birds on island have more diverse beak morphologies? (= is beak morphology space occupancy bigger for island _vs._ mainland species?)
+ <!-- TODO:TG: find a second question? Different when using the ellipses, maybe something about the direction/overlap of island vs. mainland? -->
+
+To answer these questions, we can look at standard funtion diversity/disparity/dissimilarity tools.
+We can: 1) measure the space occupancy of island and mainland using two different statistics and then 2) compare these statistics to see whether there is an effect on island on bird beak morphologies (our proxy for radiations).
+
+<!-- TODO: maybe do a PGLS or something like that? - to keep things sample. Or even a t-test -->
+
+# 3 - The simulations
+
+This answers our question but doesn't give us much context about these results: first are these exceptional or common (i.e. is there always a 50% chance of getting this answers)?
+And second, here we only compared two processes (i.e. two changes in statistics/patterns relating to two different variables) but what about the mechanisms? What is causing these different signals of radiation?
+To look at these questions, we can use two broad types of simulations:
+
+ * "null simulations" which consists here in comparing our findings to simulations where we would not expect any kind of difference between mainland and island beak shapes.
+ <!-- TODO:TG: link to the null/neutral phylosophy paper -->
+ * "mechanistic simulations" which consists here in comparing our findings with scenarios where we design a process through time to change following some mechanism: for example simulating species that arrive on an island and start radiating!
+
+## "Null" simulations
+
+<!-- TODO:TG: run the PGLS/t-test again but shuffle the mainland/island attributions. Draw the distribution of the results and then show where the observed results are. -->
+
+## "Mechanistic" simulations
+
+<!-- TODO:TG: use treats thingy for the bird island project -->
+
+# 4 - Going further
+
+ * The list of tools
+ * Types of simulations
+ * Trade off between too many parameters and not
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Bits to move around for the workshop
+
+
+
+
+
+
+
+In this script we will be looking at simulating some radiations under different scenarios to see if we can recover the signals of trait radiations.
+By signals of trait radiations here we mean a measurable change in traits variance-covariance in terms of either size change (the ellipse is bigger) or shape change (the variance-covariance profile changes).
+This vignette is split into three sections:
+
+ 1. Brief reminder of the project pitch with empirical results (what is the project about);
+ 2. Illustration of the simulations process (what we're trying to simulate);
+ 3. The results of the simulations process (detectability of island radiations);
+
+# 1 - Project idea
+
+Using the bird beak data from Gavin et al we're looking at the effect of "islandness" on bird beak shape diversity.
+The idea comes from Darwin Finches where going on an island results in an adaptive radiation is the sense of a clear and dectectable increase in trait diversity compared to their mainland counter parts.
+However this is not the case for other groups of birds that evolved on islands, for example pigeons are thought to not especially radiate on islands.
+To test that we measure the effect of islandness by modeling the traits variance covariance (in 8 dimensions) using a glm (`MCMCglmmm`) as follows:
+
+ * `data ~ trait:island-1 + rcov(island) + random(phylogeny)`
+
+Where the residuals basically explain the ecological effect of being on an island on beak shape diversity.
+
+
+```{r, eval = TRUE, echo = FALSE, fig.height = 12, fig.width = 12, message = FALSE, warning = FALSE}
+library(mcmcmcglmmm)
+library(dispRity)
+source("../Functions/data.utilities.R")
+source("../Functions/plot.utilities.R")
+source("../Functions/stat.utilities.R")
+
+load("../Data/Processed/model_data.rda")
+load(file = "../Data/Processed/all_covars_model2.rda")
+model_data <- model_data[match(names(all_covars), names(model_data))]
+
+data_darwin <- model_data[["TangaraDarwin"]]
+covar_darwin <- all_covars[["TangaraDarwin"]]
+data_pigeon <- model_data[["OWColumbidae"]]
+covar_pigeon <- all_covars[["OWColumbidae"]]
+
+op <- par(mfrow = c(2,2))
+plot.tree(data_darwin, name = "Darwin finches")
+plot.tree(data_pigeon, name = "Pigeons")
+plot.covar(covar_darwin, name = "", model = "model2")
+plot.covar(covar_pigeon, name = "", model = "model2", legend = FALSE)
+par(op)
+```
+
+From these representing the effect of island/mainland on beak shape diversity we can measure two different aspects: the size and the shape difference between the mainland and island's beak variance/covariance.
+In other words if the shape or size is bigger in island compared to mainland, there could be something interesting happening there.
+
+Here's the computed results for all clades.
+
+```{r, echo = FALSE}
+knitr::include_graphics("../Manuscript/Figures/figure_1.png")
+```
+
+So not that common all in all...
+We then do some simulations to figure out what's happening.
+
+# 2 - Parameters description
+
+```{r, echo = FALSE}
+library(treats)
+```
+
+## Base tree parameters
+
+To test our method to detect island radiation, we will use the observed parameters from the empirical datasets.
+We will generate trees with no extinctions and an arbitrary speciation rate of 1.
+We stop the simulations when reaching the median number of species in the empirical data: 105.
+
+```{r, echo = FALSE}
+## Setting the speciation rate
+speciation_rate <- make.bd.params(speciation = 1)
+
+## Setting the stop rule
+stop_rule <- list(max.taxa = 105)
+
+## Simulating a tree to show the parameters effect
+set.seed(1)
+my_tree <- treats(stop.rule = stop_rule,
+                  bd.params = speciation_rate)
+```
+
+```{r, echo = FALSE}
+## Plotting the tree
+plot(my_tree, show.tip.label = FALSE, main = "base tree parameters")
+```
+
+## Trait parameters
+
+Again, to match the empirical data we will generate a 8 traits using a Brownian motion model.
+We use a base rate and correlation of respectively 1 and 0 and then two different rate increases (2 and 10) and two different correlation increases (0.4 and 0.8 - scaled with the rates).
+This results in 9 different parameter combinations (3 rates and 3 correlations).
+
+```{r, echo = FALSE}
+## The different parameters
+rates <- c(1, 2, 10)
+correlations <- c(0, 0.4, 0.8)
+
+## Generating the 9 trait correlation matrix
+rate1_cor0 <- matrix(correlations[1], 8, 8)
+diag(rate1_cor0) <- rates[1]
+rate2_cor0 <- matrix(correlations[1], 8, 8)
+diag(rate2_cor0) <- rates[2]
+rate10_cor0 <- matrix(correlations[1], 8, 8)
+diag(rate10_cor0) <- rates[3]
+
+rate1_cor04 <- matrix(correlations[2], 8, 8)
+diag(rate1_cor04) <- rates[1]
+rate1_cor08 <- matrix(correlations[3], 8, 8)
+diag(rate1_cor08) <- rates[1]
+
+rate2_cor04 <- matrix(correlations[2], 8, 8)
+diag(rate2_cor04) <- rates[1]
+rate2_cor04 <- rate2_cor04 * rates[2]
+rate10_cor04 <- matrix(correlations[2], 8, 8)
+diag(rate10_cor04) <- rates[1]
+rate10_cor04 <- rate10_cor04 * rates[3]
+
+rate2_cor08 <- matrix(correlations[3], 8, 8)
+diag(rate2_cor08) <- rates[1]
+rate2_cor08 <- rate2_cor08 * rates[2]
+rate10_cor08 <- matrix(correlations[3], 8, 8)
+diag(rate10_cor08) <- rates[1]
+rate10_cor08 <- rate10_cor08 * rates[3]
+
+## Combining them into a list
+correlation_matrices <- list(
+   "rate = 1;  cor = 0"  = rate1_cor0,
+   "rate = 2;  cor = 0"  = rate2_cor0,
+   "rate = 10; cor = 0"  = rate10_cor0,
+   "rate = 1;  cor = 04" = rate1_cor04,
+   "rate = 2;  cor = 04" = rate2_cor04,
+   "rate = 10; cor = 04" = rate10_cor04,
+   "rate = 1;  cor = 08" = rate1_cor08,
+   "rate = 2;  cor = 08" = rate2_cor08,
+   "rate = 10; cor = 08" = rate10_cor08)
+
+
+## Generating 9 different trees with these parameters
+different_traits <- list()
+for(one_cor_mat in 1:9) {
+  ## Make the trait object
+  my_trait <- make.traits(process = BM.process, n = 8,
+                          process.args = list(
+                             Sigma = correlation_matrices[[one_cor_mat]])
+                          )
+
+  ## Simulate the tree and data
+  different_traits[[one_cor_mat]] <- treats(
+      stop.rule  = stop_rule,
+      bd.params  = speciation_rate,
+      traits     = my_trait,
+      replicates = 10)
+}
+```
+
+```{r, fig.height = 12, fig.width = 12, echo = FALSE}
+## Plotting the trees and traits
+op <- par(mfrow = c(3,3))
+for(one_tree in 1:9) {
+  plot(different_traits[[one_tree]], trait = c(1,2), main = names(correlation_matrices)[one_tree],
+       xlab = "", ylab = "")
+}
+par(op)
+```
+
+### Decreasing variance per trait
+
+To match the empirical data, we also decrease the overal variance of each trait to simulate the ordination effect of a PCA.
+I.e. so that the variance of the first dimension is higher than the second one which is higher than the third one etc.
+To do that we use a exponential decay curve.
+
+```{r, eval = FALSE}
+## Decreasing the dimensional variance in an exponential way 
+data %*% diag(rev(exp(1:8)/exp(8))
+```
+
+Note that this is done internally in the simulation pipeline used below (see `../Functions/stat.utilities.R::simulate.island.pipeline`).
+
+## Islandness parameters
+
+To check the detectability of radiations, we will simulate two main types of radiations by simulate an extra binary trait that simulates whether a lineage is on an island or not. This will then in turn affect the change in traits rates and correlation to simulate an ecological release relating to evolving on the island.
+
+ * **conditional**: where a discrete trait is simulated with a low probability of going from mainland to island and an even lower probability of going back from the island. This method allows multiple rare island colonisations and even rarer returns to mainland.
+ * **founder**: when a discrete trait is simulated with no changes (i.e. the species is on the mainland) but one lineage switches to island and stays there. All the lineages have the same probability of moving to the island but the event fires only once.
+
+> Note that to make the simulation match our empirical data, we kept only the island simulations (conditional or founder) that resulted in a proportion of island species between 15% and 73%.
+
+### Conditional
+
+For this parameter, we first simulate an island binary trait with the following transition matrix with a low rate of going from mainland to island and an even lower rate from going to island back to mainland.
+
+```{r, message = FALSE, echo = FALSE}
+## First let's design a discrete islandness trait
+transition_matrix <- matrix(c(3,   # rate from mainland to mainland (stay)
+                              0.2, # rate from mainland to island (founding) (1/5)
+                              0.05, # rate from island to mainland (revert) (1/20)
+                              3),   # rate from island to island (stay)
+                              , 2, 2)
+rownames(transition_matrix) <- colnames(transition_matrix) <- c("mainland", "island")
+
+## Displaying the table
+knitr::kable(transition_matrix)
+```
+
+This is just an illustration of how the extra "islandness" trait evolves with orange branches being mainland and blue being island (note that no trait value is associated here):
+
+```{r, message = FALSE, echo = FALSE}
+## The island trait
+island_trait <- make.traits(discrete.process, process.args = list(transitions = transition_matrix), trait.name = "islandness")
+
+## Testing the tree
+set.seed(1)
+island_tree <- treats(stop.rule  = stop_rule,
+                      bd.params  = speciation_rate,
+                      traits     = island_trait,
+                      null.error = 100)
+
+## This is an example of the tree with islandness
+plot(island_tree, legend = TRUE)
+```
+
+We can then combined this with a trait simulation making the 8D trait conditional to whether the lineage is on an island or not.
+In other words we can set a specific rate and correlation for lineages evolving on islands and another one for lineages evolving on the mainland.
+Here is an example simulating a constrain release (going from a low rate high correlation to a high rate low correlation trait):
+
+```{r, fig.height = 12, fig.width = 12, echo = FALSE, message = FALSE}
+## Set the two traits
+constrained_trait <- make.traits(process = BM.process, n = 8,
+                                 process.args = list(
+                                   Sigma = correlation_matrices[["rate = 1;  cor = 08"]])
+                                 )
+released_trait <- make.traits(process = BM.process, n = 8,
+                              process.args = list(
+                                Sigma = correlation_matrices[["rate = 10;  cor = 0"]])
+                              )
+
+## Set the conditional trait
+link_args <- list("is_mainland" = function(x1) {x1 == 0},
+                  "is_island"   = function(x1) {x1 == 1}) 
+conditional_trait <- link.traits(base.trait = island_trait,
+                                 next.trait = list(constrained_trait, released_trait),
+                                 link.type = "conditional",
+                                 link.args = link_args)
+
+set.seed(3)
+## Simulating a bunch of trees with this event
+island_evol_trait <- treats(stop.rule  = stop_rule,
+                            bd.params  = speciation_rate,
+                            traits     = conditional_trait,
+                            null.error = 100)
+
+## Colouring the tips per subtree type 
+tip_node_colors <- rep(NA, c(Nnode(island_evol_trait$tree) + Ntip(island_evol_trait$tree)))
+names(tip_node_colors) <- c(island_evol_trait$tree$tip.label, island_evol_trait$tree$node.label)
+island_elements <- names(which(island_evol_trait$data[, 1] == 1))
+mainla_elements <- names(which(island_evol_trait$data[, 1] == 0))
+tip_node_colors[island_elements[grepl("n", island_elements)]] <- "lightblue"
+tip_node_colors[island_elements[grepl("t", island_elements)]] <- "blue"
+tip_node_colors[mainla_elements[grepl("n", mainla_elements)]] <- "yellow"
+tip_node_colors[mainla_elements[grepl("t", mainla_elements)]] <- "orange"
+
+## Get the mainland tips
+mainland_species <- mainla_elements[grepl("t", mainla_elements)]
+island_data   <- drop.tip.treats(island_evol_trait, tip = mainland_species)
+mainland_data <- keep.tip.treats(island_evol_trait, tip = mainland_species)
+
+## Plotting the tree and the traits
+op <- par(mfrow = c(2,2))
+plot(island_evol_trait, trait = 1, main = "island trait")
+plot(island_evol_trait, trait = c(2,3), col = tip_node_colors, main = "other trait")
+plot(island_data, trait = c(2,3), col = c("tips" = "blue", "nodes" = "lightblue"), main = "island species only")
+plot(mainland_data, trait = c(2,3), col = c("tips" = "orange", "nodes" = "yellow"), main = "mainland species only")
+par(op)
+```
+
+And here's the example in 3D:
+
+```{r, echo = FALSE}
+plot(island_evol_trait, trait = c(2,3), col = tip_node_colors, use.3D = TRUE, ylab = "A1", zlab = "A2")
+rgl::rglwidget()
+```
+
+### Founder
+
+This is example illustrates the main clade (orange) that evolves a constrained trait and the founding clade (in blue) that has an unconstrained trait (showing the trait release).
+
+```{r, echo = FALSE, message = FALSE}
+## The founding event
+reaching_an_island <- make.events(
+                    condition    = taxa.condition(10, condition = `>=`),
+                    target       = "founding",
+                    modification = founding.event(
+                                    bd.params = speciation_rate,
+                                    traits    = released_trait),
+                    additional.args = list(prefix = "founding_"))
+
+set.seed(1)
+## Simulating a bunch of trees with this event
+founding_tree <- treats(stop.rule  = stop_rule,
+                        bd.params  = speciation_rate,
+                        traits     = constrained_trait,
+                        events     = reaching_an_island,
+                        null.error = 100)
+
+## Colouring the tips per subtree type 
+tip_colours <- rep("orange", Ntip(founding_tree$tree))
+tip_colours[grepl("founding", founding_tree$tree$tip.label)] <- "blue" 
+node_colours <- rep("yellow", Nnode(founding_tree$tree))
+node_colours[grepl("founding", founding_tree$tree$node.label)] <- "lightblue" 
+
+## Showing the tree
+plot(founding_tree, trait = c(1,2), col = c(tip_colours, node_colours))
+```
+
+And here's the example in 3D:
+
+```{r, echo = FALSE}
+plot(founding_tree, trait = c(1,2), col = c(tip_colours, node_colours), use.3D = TRUE)
+rgl::rglwidget()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 3 - Measuring detectability of island radiations
+
+With these elements we can test 50 different scenarios with the following expectations:
+
+ * Null models (no change is expected)
+ * Release models (an increase in size and or shape is expected)
+ * Constrain models (no changes are expected)
+ * Mixed models (some changes are expected)
+
+
+|        | Correlations |           |           |          |          |
+|--------|--------------|-----------|-----------|----------|----------|
+|Rates   | 0 -> 0       | 0 -> 0.4  | 0 -> 0.8  | 0.4 -> 0 | 0.8 -> 0 | 
+|1 -> 1  | <span style="color:grey">Null</span> | Constrain | Constrain | <span style="color:green">Release</span> | <span style="color:green">Release</span> |
+|1 -> 2  | <span style="color:green">Release</span> | Mixed     | Mixed     | <span style="color:green">Release</span> | <span style="color:green">Release</span> |
+|1 -> 10 | <span style="color:green">Release</span> | Mixed     | Mixed     | <span style="color:green">Release</span> | <span style="color:green">Release</span> |
+|2 -> 1  | Constrain    | Constrain | Constrain | Mixed    | Mixed    |
+|10 -> 1 | Constrain    | Constrain | Constrain | Mixed    | Mixed    |
+
+
+
+```{r, eval = FALSE, echo = FALSE}
+## Loading the package and functions
+library(mcmcmcglmmm)
+library(treats)
+library(caper)
+source("../Functions/data.utilities.R")
+source("../Functions/plot.utilities.R")
+source("../Functions/stat.utilities.R")
+
+## All rates and correlations
+rates <- list(c(1, 1), c(1, 2), c(1, 10), c(2, 1), c(10, 1), c(1, 1), c(1, 1), c(1, 1), c(1, 1), c(1, 2), c(1, 2), c(1, 10), c(1, 10), c(1, 2), c(1, 2), c(1, 10), c(1, 10), c(2, 1), c(2, 1), c(10, 1), c(10, 1), c(2, 1), c(2, 1), c(10, 1), c(10, 1))
+cors <- list(c(0, 0), c(0, 0), c(0, 0), c(0, 0), c(0, 0), c(0, 0.4), c(0, 0.8), c(0.4, 0), c(0.8, 0), c(0, 0.4), c(0, 0.8), c(0, 0.4), c(0, 0.8), c(0.4, 0), c(0.8, 0), c(0.4, 0), c(0.8, 0), c(0, 0.4), c(0, 0.8), c(0, 0.4), c(0, 0.8), c(0.4, 0), c(0.8, 0), c(0.4, 0), c(0.8, 0))
+
+type = "<TYPE>"
+rate_set <- rates[[<ID>]]
+cor_set <- cors[[<ID>]]
+
+start <- Sys.time()
+replicate(50, run.one.simul(type = type, rate = rate_set, cor = cor_set))
+end <- Sys.time()
+
+## Save the timer
+system(paste0("echo 'sim_", type, "_rate", paste(rate_set, collapse = "to"), "_cor", paste(cor_set, collapse = "to"), ": ", difftime(end, start, units = "hours"), "' >> record.timer.txt"))
+```
+
+</details>
+
+
+## Results
+
+
+```{r, echo = FALSE}
+source("../Functions/data.utilities.R")
+source("../Functions/plot.utilities.R")
+source("../Functions/stat.utilities.R")
+
+## Load all the pairs of simulations
+rates <- list(c(1,1),  c(1,1),  c(1,1),  c(1,1),  c(1,1),
+              c(1,2),  c(1,2),  c(1,2),  c(1,2),  c(1,2),
+              c(1,10), c(1,10), c(1,10), c(1,10), c(1,10),
+              c(2,1),  c(2,1),  c(2,1),  c(2,1),  c(2,1),
+              c(10,1), c(10,1), c(10,1), c(10,1), c(10,1))
+
+cors <-  list(c(0,0), c(0,0.4), c(0,0.8), c(0.4,0), c(0.8,0),
+              c(0,0), c(0,0.4), c(0,0.8), c(0.4,0), c(0.8,0),
+              c(0,0), c(0,0.4), c(0,0.8), c(0.4,0), c(0.8,0),
+              c(0,0), c(0,0.4), c(0,0.8), c(0.4,0), c(0.8,0),
+              c(0,0), c(0,0.4), c(0,0.8), c(0.4,0), c(0.8,0))
+
+## Positions
+positions <- c("topleft", rep("top", 4),
+               "left", rep("middle", 4),
+               "left", rep("middle", 4),
+               "left", rep("middle", 4),
+               "bottomleft", rep("bottom", 4))
+
+## Frames
+frames <- c("grey",      NA, NA, "darkgreen", "darkgreen",
+            "darkgreen", NA, NA, "darkgreen", "darkgreen",
+            "darkgreen", NA, NA, "darkgreen", "darkgreen",
+            NA, NA, NA, NA, NA,
+            NA, NA, NA, NA, NA)
+```
+
+```{r, echo = FALSE, eval = FALSE}
+## Get all the results
+simulation_stats <- mapply(load.simulations.pairs, rate = rates, cor = cors, MoreArgs = list(extract = "statistics"), SIMPLIFY = FALSE)
+save(simulation_stats, file = "../Data/Processed/simulation_stats.rda")
+```
+
+```{r, echo = FALSE}
+## Load the data
+load(file = "../Data/Processed/simulation_stats.rda")
+```
+
+#### Simulation of islandness on size differences (squares are founder trees and circles are conditional island ones):
+
+```{r, echo = FALSE, warning = FALSE}
+## Shifts in size
+op <- par(mfrow = c(5, 5))
+for(one_sim in 1:25) {
+  one.stat.plot(simulation_stats[[one_sim]], statistic = "size", position = positions[one_sim], rate = rates[[one_sim]], cor = cors[[one_sim]], colour_signif = "absolute", frame = frames[one_sim])
+}
+par(op)
+```
+
+Here the simulations seem to suggest that increases in rates are more important to change the size of the island species ellipse compared to changes in correlation. Also, founder effects seem to be more likely to result in changes in ellipses size.
+
+#### Simulation of islandness on shape differences (squares are founder trees and circles are conditional island ones):
+
+```{r, echo = FALSE, warning = FALSE}
+## Shifts in shapes
+op <- par(mfrow = c(5, 5))
+for(one_sim in 1:25) {
+  one.stat.plot(simulation_stats[[one_sim]], statistic = "shape", position = positions[one_sim], rate = rates[[one_sim]], cor = cors[[one_sim]], colour_signif = "absolute", frame = frames[one_sim])
+}
+par(op)
+```
+
+Regarding changes in shape, there is no clear signal from changes in rate or correlation.
+
+## Model checks (proportion of islandness and D statistic)
+
+These following plots are just to check if the simulations worked correctly.
+
+#### Proportion of islandness (squares are founder trees and circles are conditional island ones):
+
+By design (and to match the observed data) we expect the proportion of island species to be around 25%.
+
+```{r, echo = FALSE}
+## Proportion of islandness
+op <- par(mfrow = c(5, 5))
+for(one_sim in 1:25) {
+  one.stat.plot(simulation_stats[[one_sim]], statistic = "islandness", position = positions[one_sim], rate = rates[[one_sim]], cor = cors[[one_sim]], colour_signif = NULL)
+}
+par(op)
+```
+
+#### D statistic (squares are founder trees and circles are conditional island ones):
+
+Similarly, by design, we expect the D statistic to be negative for the founder trees (monophyletic island radiations) and to be spread around 0 for the conditional trees (random radiations; some more monophyletic - negative values - and some more evenly spread along the tree - positive values).
+
+```{r, echo = FALSE}
+## Phylo clustering
+op <- par(mfrow = c(5, 5))
+for(one_sim in 1:25) {
+  one.stat.plot(simulation_stats[[one_sim]], statistic = "d_stat", position = positions[one_sim], rate = rates[[one_sim]], cor = cors[[one_sim]], colour_signif = NULL)
+}
+par(op)
+```
