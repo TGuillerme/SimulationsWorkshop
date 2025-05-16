@@ -54,13 +54,16 @@ We have created a dataset summarising that for the two clades: pigeons and Darwi
 
 ```{r, eval = FALSE}
 ## Data
-
+load("../Data/data_darwin.rda")
+load("../Data/data_pigeon.rda")
 ```
-<!-- TODO:TG: wrap up the data in shareable way -->
 
 Here is one way to visualise this data:
 
 ```{r, eval = FALSE}
+
+
+
 # op <- par(mfrow = c(2,2))
 # plot.tree(data_darwin, name = "Darwin finches")
 # plot.tree(data_pigeon, name = "Pigeons")
