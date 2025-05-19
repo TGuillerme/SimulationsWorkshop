@@ -52,26 +52,42 @@ For that we are using a part of the dataset of
 where we have two different regions of a trait space describing bird beak morphology in 8 dimensions (species close together in the trait space share similar beak shapes) as well as binary information on whether the species are living on islands or on the mainland.
 We have created a dataset summarising that for the two clades: pigeons and Darwin Finches.
 
-```{r, eval = FALSE}
-## Data
+```{r, eval = TRUE}
+## Loading the data
 load("../Data/data_darwin.rda")
-load("../Data/data_pigeon.rda")
+load("../Data/data_pigeon.rda") 
 ```
 
 Here is one way to visualise this data:
 
-```{r, eval = FALSE}
+```{r, eval = TRUE}
+## Loading a custom function for plotting the data
+plot.islandness <- function(data_list, ...) {
+    ## Ladderise the tree
+    tree <- ladderize(data_list$tree)
+    ## Get the tip_data and transform them into a colour vector
+    tip_data <- data_list$islandness
+    levels(tip_data) <- c("#E19A10", "#184695")
+    tip_data <- as.character(tip_data) 
+    ## Getting the edge colours
+    edge_colors <- dispRity::match.tip.edge(tip_data[match(tree$tip.label, names(data_list$islandness))],
+                                            tree, replace.na = "grey")
+    ## Plotting the tree
+    plot(tree, show.tip.label = FALSE, edge.color = edge_colors, ...)
+}
 
-
-
-# op <- par(mfrow = c(2,2))
-# plot.tree(data_darwin, name = "Darwin finches")
-# plot.tree(data_pigeon, name = "Pigeons")
-# plot.covar(covar_darwin, name = "", model = "model2")
-# plot.covar(covar_pigeon, name = "", model = "model2", legend = FALSE)
-# par(op)
+## Setting the plotting windown in a 2*2 grid
+op <- par(mfrow = c(2,2))
+## Plotting the trees using the custom plot.islandness function
+plot.islandness(data_darwin, main = "Darwin finches")
+plot.islandness(data_pigeon, main = "Pigeons")
+## Plotting the trait spaces using dispRity objects
+plot(dispRity::custom.subsets(data_darwin$traitspace, group = data_darwin$islandness),
+     col = c("#E19A10", "#184695"))
+plot(dispRity::custom.subsets(data_pigeon$traitspace, group = data_pigeon$islandness),
+     col = c("#E19A10", "#184695"), legend = FALSE)
+par(op)
 ```
-<!-- TODO:TG: plotting the data script -->
 
 # 2 - The question
 
