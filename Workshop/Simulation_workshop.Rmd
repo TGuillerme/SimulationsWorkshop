@@ -56,6 +56,14 @@ We have created a dataset summarising that for the two clades: pigeons and Darwi
 ## Loading the data
 load("../Data/data_darwin.rda")
 load("../Data/data_pigeon.rda") 
+
+## Making dispRity objects for the downstream analyses
+darwin_space <- custom.subsets(data  = data_darwin$traitspace,
+                               group = data_darwin$islandness,
+                               tree  = data_darwin$tree)
+pigeon_space <- custom.subsets(data  = data_pigeon$traitspace,
+                               group = data_pigeon$islandness,
+                               tree  = data_pigeon$tree)
 ```
 
 Here is one way to visualise this data:
@@ -82,10 +90,8 @@ op <- par(mfrow = c(2,2))
 plot.islandness(data_darwin, main = "Darwin finches")
 plot.islandness(data_pigeon, main = "Pigeons")
 ## Plotting the trait spaces using dispRity objects
-plot(dispRity::custom.subsets(data_darwin$traitspace, group = data_darwin$islandness),
-     col = c("#E19A10", "#184695"))
-plot(dispRity::custom.subsets(data_pigeon$traitspace, group = data_pigeon$islandness),
-     col = c("#E19A10", "#184695"), legend = FALSE)
+plot(darwin_space, col = c("#E19A10", "#184695"))
+plot(pigeon_space, col = c("#E19A10", "#184695"), legend = FALSE)
 par(op)
 ```
 
@@ -99,6 +105,35 @@ We will classify adaptive radiations in two ways:
 
 To answer these questions, we can look at standard funtion diversity/disparity/dissimilarity tools.
 We can: 1) measure the space occupancy of island and mainland using two different statistics and then 2) compare these statistics to see whether there is an effect on island on bird beak morphologies (our proxy for radiations).
+
+To approximate the diversity of beak morphologies we will calculate the euclidean distance of each species to the center of their group (i.e. the distance of any island/mainland species to the average island/mainland species in traitspace).
+We can do that using the `centroids` metric from the `dispRity` package.
+Note that they are many other functional diversity metric (or disparity metrics) that can be used here, this is just for an easy illustrative example!
+
+```{r}
+## Measuring the size of trait space for both groups
+func_div_darwin <- dispRity(darwin_space, metric = centroids)
+func_div_pigeon <- dispRity(pigeon_space, metric = centroids)
+
+## The differences in size between groups in each clade
+op <- par(mfrow = c(1,2))
+plot(func_div_darwin, col = c("#E19A10", "#184695"),
+     main = "Darwin occupancy", ylab = "Distance to group centre")
+plot(func_div_pigeon, col = c("#E19A10", "#184695"),
+     main = "Pigeon occupancy", ylab = "")
+par(op)
+```
+
+We can then measure the difference in space occupancy between both using a simple PGLS (phylogenetic generalised least square - TL;DR: a kind of linear model that takes phylogenetic relationship between observations into account).
+
+```{r}
+summary(pgls.dispRity(func_div_darwin, formula = disparity ~ group-1))
+
+
+test.dispRity(func_div_darwin, test = t.test)
+
+```
+
 
 <!-- TODO: maybe do a PGLS or something like that? - to keep things sample. Or even a t-test -->
 
