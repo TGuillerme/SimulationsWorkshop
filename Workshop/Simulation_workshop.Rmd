@@ -22,13 +22,14 @@ By basic we mean whether you are familiar with the following concepts:
 
 We will be using the following packages for this workshop:
 
-```{r, eval = FALSE}
+```{r}
 ## The names of the packages we will be using in this workshop
-required_packages <- c("")
+required_packages <- c("dispRity")
 
 ## Installing/updating the packages if you haven't already
 install.packages(required_packages)
 ```
+
 <!-- TODO:TG: list of packages -->
 
 
@@ -41,7 +42,7 @@ You can always ask your colleagues or us if you feel a bit lost or, understand t
 
 ```{r}
 ## Loading the packages
-library()
+library(dispRity)
 ```
 <!-- TODO:TG: list of packages -->
 
@@ -52,7 +53,9 @@ For that we are using a part of the dataset of
 where we have two different regions of a trait space describing bird beak morphology in 8 dimensions (species close together in the trait space share similar beak shapes) as well as binary information on whether the species are living on islands or on the mainland.
 We have created a dataset summarising that for the two clades: pigeons and Darwin Finches.
 
-```{r, eval = TRUE}
+> Note that the data values have been modified here for the example to be easier to interpret. We cheated exaggerating the effect of islandness in Darwin finches by 0.56.
+
+```{r}
 ## Loading the data
 load("../Data/data_darwin.rda")
 load("../Data/data_pigeon.rda") 
@@ -68,7 +71,7 @@ pigeon_space <- custom.subsets(data  = data_pigeon$traitspace,
 
 Here is one way to visualise this data:
 
-```{r, eval = TRUE}
+```{r}
 ## Loading a custom function for plotting the data
 plot.islandness <- function(data_list, ...) {
     ## Ladderise the tree
@@ -111,7 +114,7 @@ We can do that using the `centroids` metric from the `dispRity` package.
 Note that they are many other functional diversity metric (or disparity metrics) that can be used here, this is just for an easy illustrative example!
 
 ```{r}
-## Measuring the size of trait space for both groups
+## Measure the space occupancy
 func_div_darwin <- dispRity(darwin_space, metric = centroids)
 func_div_pigeon <- dispRity(pigeon_space, metric = centroids)
 
@@ -124,18 +127,14 @@ plot(func_div_pigeon, col = c("#E19A10", "#184695"),
 par(op)
 ```
 
+
 We can then measure the difference in space occupancy between both using a simple PGLS (phylogenetic generalised least square - TL;DR: a kind of linear model that takes phylogenetic relationship between observations into account).
 
 ```{r}
+## Testing the effect of islandness on space occupancy (disparity)
 summary(pgls.dispRity(func_div_darwin, formula = disparity ~ group-1))
-
-
-test.dispRity(func_div_darwin, test = t.test)
-
+summary(pgls.dispRity(func_div_pigeon, formula = disparity ~ group-1))
 ```
-
-
-<!-- TODO: maybe do a PGLS or something like that? - to keep things sample. Or even a t-test -->
 
 # 3 - The simulations
 
@@ -148,6 +147,73 @@ To look at these questions, we can use two broad types of simulations:
  * "mechanistic simulations" which consists here in comparing our findings with scenarios where we design a process through time to change following some mechanism: for example simulating species that arrive on an island and start radiating!
 
 ## "Null" simulations
+
+The "null" simulations are often the easiest to test and implement. Basically the idea here is to artificially remove the suspected mechanism (here islandness making beaks more diverse) by simply randomly re-attributing the variable of interest. In other words, randomly shuffling which species is from an island or not to see if the relation island = more diverse beaks holds.
+
+```{r}
+## Check how many species are in an island or not
+n_per_group <- table(data_darwin$islandness)
+
+## Making all species "mainland"
+shuffled_group <- data_darwin$islandness
+shuffled_group[1:length(shuffled_group)] <- "mainland"
+
+## Randomly attributing species to islands
+shuffled_group[sample(1:length(shuffled_group), n_per_group["island"])] <- "island"
+
+## Creating a null space with the newly attributed species
+darwin_null_space <- custom.subsets(data  = data_darwin$traitspace,
+                                    group = shuffled_group,
+                                    tree  = data_darwin$tree)
+op <- par(mfrow = c(1,2))
+plot(darwin_space, col = c("#E19A10", "#184695"), main = "Observed")
+plot(darwin_null_space, col = c("#E19A10", "#184695"), main = "Randomised",
+     legend = FALSE)
+par(op)
+```
+
+To simplify our work, we can automatise this shuffling using the `dispRity` function `boot.matrix` with the argument `boot.type = "null"`. 
+
+```{r}
+## Randomising both spaces
+darwin_null_space <- boot.matrix(darwin_space, boot.type = "null")
+pigeon_null_space <- boot.matrix(pigeon_space, boot.type = "null")
+
+## Calculating the null space occupancy
+func_div_null_darwin <- dispRity(darwin_null_space, metric = centroids)
+func_div_null_pigeon <- dispRity(pigeon_null_space, metric = centroids)
+
+## Plotting the results of the null sampling
+op <- par(mfrow = c(2,2))
+plot(func_div_darwin, col = c("#E19A10", "#184695"),
+     main = "Darwin occupancy observed",
+     ylab = "Distance to group centre")
+plot(func_div_null_darwin, col = c("#E19A10", "#184695"),
+     main = "Darwin occupancy randomised")
+plot(func_div_pigeon, col = c("#E19A10", "#184695"),
+     main = "Pigeon occupancy observed",
+     ylab = "Distance to group centre")
+plot(func_div_null_pigeon, col = c("#E19A10", "#184695"),
+     main = "Pigeon occupancy randomised")
+par(op)
+
+```
+
+## To simplify 
+
+
+## Randomly attributing species to islands or not
+
+
+darwin_null_space <- custom.subsets(data  = data_darwin$traitspace,
+                               group = data_darwin$islandness,
+                               tree  = data_darwin$tree)
+pigeon_space <- custom.subsets(data  = data_pigeon$traitspace,
+                               group = data_pigeon$islandness,
+                               tree  = data_pigeon$tree)
+```
+
+
 
 <!-- TODO:TG: run the PGLS/t-test again but shuffle the mainland/island attributions. Draw the distribution of the results and then show where the observed results are. -->
 
